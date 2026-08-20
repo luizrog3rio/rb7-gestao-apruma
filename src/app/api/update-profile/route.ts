@@ -24,10 +24,7 @@ export async function POST(request: Request) {
     }
 
     const cleanUsername = instagram.replace('@', '').trim()
-    // Esta rota é o botão individual "forçar atualização" e também roda ao
-    // trocar o @; nesses dois casos o administrador pediu dados realmente
-    // novos, então ela ignora o cache de 24h.
-    const result = await fetchProfileWithStatus(cleanUsername, { forceRefresh: true })
+    const result = await fetchProfileWithStatus(cleanUsername)
 
     if (result.status !== 'ok') {
       if (result.status === 'not_found' || result.status === 'restricted') {
