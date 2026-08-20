@@ -1,3 +1,9 @@
+import {
+  instagramProfileCacheKey,
+  readInstagramProfileCache,
+  writeInstagramProfileCache,
+} from '@/lib/instagram-cache'
+
 const SCRAPECREATORS_API_KEY = process.env.SCRAPECREATORS_API_KEY!
 const SC_PROFILE_URL = 'https://api.scrapecreators.com/v1/instagram/profile'
 
@@ -46,6 +52,20 @@ type ScUser = {
     count?: number
     edges?: { node?: { taken_at_timestamp?: number } }[]
   }
+}
+
+const PROFILE_CACHE_TTL_MS = 24 * 60 * 60 * 1000
+const PROFILE_ISSUE_CACHE_TTL_MS = 60 * 60 * 1000
+const profileRequestsInFlight = new Map<string, Promise<ProfileFetchResult>>()
+
+function isProfileFetchResult(value: unknown): value is ProfileFetchResult {
+  if (typeof value !== 'object' || value === null || !('status' in value)) return false
+  const status = (value as { status?: unknown }).status
+  if (status === 'ok') {
+    const profile = (value as { profile?: unknown }).profile
+    return typeof profile === 'object' && profile !== null
+  }
+  return status === 'not_found' || status === 'restricted'
 }
 
 function mapUser(user: ScUser, fallbackHandle: string): InstagramProfile {
@@ -125,10 +145,7 @@ async function fetchFromLooter(handle: string): Promise<ProfileFetchResult> {
   }
 }
 
-export async function fetchProfileWithStatus(username: string): Promise<ProfileFetchResult> {
-  const handle = username.replace('@', '').trim()
-  if (!handle) return { status: 'error', profile: null }
-
+async function fetchFreshProfile(handle: string): Promise<ProfileFetchResult> {
   const primary = await fetchFromScrapeCreators(handle)
   if (primary.status === 'ok') return primary
 
@@ -140,6 +157,47 @@ export async function fetchProfileWithStatus(username: string): Promise<ProfileF
   if (fallback.status === 'not_found') return fallback
   // Senão, mantém o resultado do primário (restricted/not_found/error).
   return primary
+}
+
+export async function fetchProfileWithStatus(
+  username: string,
+  options: { forceRefresh?: boolean } = {}
+): Promise<ProfileFetchResult> {
+  const handle = username.replace('@', '').trim().toLowerCase()
+  if (!handle) return { status: 'error', profile: null }
+
+  const cacheKey = instagramProfileCacheKey(handle)
+  if (!options.forceRefresh) {
+    const cached = await readInstagramProfileCache(cacheKey)
+    if (isProfileFetchResult(cached)) return cached
+  }
+
+  let request = profileRequestsInFlight.get(cacheKey)
+  if (!request) {
+    request = fetchFreshProfile(handle)
+    profileRequestsInFlight.set(cacheKey, request)
+  }
+
+  let result: ProfileFetchResult
+  try {
+    result = await request
+  } finally {
+    if (profileRequestsInFlight.get(cacheKey) === request) {
+      profileRequestsInFlight.delete(cacheKey)
+    }
+  }
+
+  // Erro de rede/cota nunca é cacheado. Perfis ausentes ou restritos ficam só
+  // por uma hora para permitir correção rápida de @ ou mudança de privacidade.
+  if (result.status !== 'error') {
+    await writeInstagramProfileCache({
+      cacheKey,
+      handle,
+      payload: result,
+      ttlMs: result.status === 'ok' ? PROFILE_CACHE_TTL_MS : PROFILE_ISSUE_CACHE_TTL_MS,
+    })
+  }
+  return result
 }
 
 export async function fetchInstagramProfile(username: string): Promise<InstagramProfile | null> {
