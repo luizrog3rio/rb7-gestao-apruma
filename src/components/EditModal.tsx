@@ -207,10 +207,11 @@ export default function EditModal({ mentorado, onClose, onSave, onDelete, userRo
               mentorado.status === 'cancelou' ? 'bg-red-50 text-red-700 border border-red-200'
                 : mentorado.status === 'finalizou' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 : mentorado.status === 'reembolsado' ? 'bg-slate-100 text-slate-700 border border-slate-300'
+                : mentorado.status === 'inadimplente' ? 'bg-orange-50 text-orange-700 border border-orange-200'
                 : 'bg-amber-50 text-amber-700 border border-amber-200'
             }`}>
-              <span>{mentorado.status === 'cancelou' ? '❌' : mentorado.status === 'finalizou' ? '🏁' : mentorado.status === 'reembolsado' ? '💸' : '⏸️'}</span>
-              {mentorado.status === 'cancelou' ? 'Cancelou' : mentorado.status === 'finalizou' ? 'Finalizou' : mentorado.status === 'reembolsado' ? 'Reembolsou' : 'Pausou'}
+              <span>{mentorado.status === 'cancelou' ? '❌' : mentorado.status === 'finalizou' ? '🏁' : mentorado.status === 'reembolsado' ? '💸' : mentorado.status === 'inadimplente' ? '💳' : '⏸️'}</span>
+              {mentorado.status === 'cancelou' ? 'Cancelou' : mentorado.status === 'finalizou' ? 'Finalizou' : mentorado.status === 'reembolsado' ? 'Reembolsou' : mentorado.status === 'inadimplente' ? 'Inadimplente' : 'Pausou'}
               {mentorado.status_at && (
                 <span className="text-xs opacity-70">
                   em {new Date(mentorado.status_at).toLocaleDateString('pt-BR')}
@@ -289,6 +290,17 @@ export default function EditModal({ mentorado, onClose, onSave, onDelete, userRo
                   className="px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors border border-slate-300"
                 >
                   💸 Reembolsou
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!confirm('Marcar como INADIMPLENTE?')) return
+                    await supabase.from('mentorados').update({ status: 'inadimplente', status_at: new Date().toISOString() }).eq('id', mentorado.id)
+                    alert('Marcado como inadimplente')
+                    onSave()
+                  }}
+                  className="px-3 py-2 text-sm font-medium text-orange-600 hover:bg-orange-50 rounded-xl transition-colors border border-orange-200"
+                >
+                  💳 Inadimplente
                 </button>
               </>
             )}

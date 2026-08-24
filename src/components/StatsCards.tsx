@@ -22,6 +22,7 @@ export default function StatsCards({ mentorados, growthFilter = '', statusFilter
   const pausou = mentorados.filter((m) => m.status === 'pausou').length
   const finalizou = mentorados.filter((m) => m.status === 'finalizou').length
   const reembolsou = mentorados.filter((m) => m.status === 'reembolsado').length
+  const inadimplente = mentorados.filter((m) => m.status === 'inadimplente').length
 
   const pct = (v: number) => total > 0 ? `${((v / total) * 100).toFixed(0)}%` : '0%'
 
@@ -36,6 +37,7 @@ export default function StatsCards({ mentorados, growthFilter = '', statusFilter
     { label: 'Pausou', value: pausou, color: 'bg-amber-500', icon: '⏸️', badge: null, percent: pct(pausou), active: statusFilter === 'pausou', onClick: () => onStatusClick?.('pausou') },
     { label: 'Finalizou', value: finalizou, color: 'bg-emerald-500', icon: '🏁', badge: null, percent: pct(finalizou), active: statusFilter === 'finalizou', onClick: () => onStatusClick?.('finalizou') },
     { label: 'Reembolsou', value: reembolsou, color: 'bg-slate-500', icon: '💸', badge: null, percent: pct(reembolsou), active: statusFilter === 'reembolsado', onClick: () => onStatusClick?.('reembolsado') },
+    { label: 'Inadimplente', value: inadimplente, color: 'bg-orange-500', icon: '💳', badge: null, percent: pct(inadimplente), active: statusFilter === 'inadimplente', onClick: () => onStatusClick?.('inadimplente') },
   ]
 
   return (

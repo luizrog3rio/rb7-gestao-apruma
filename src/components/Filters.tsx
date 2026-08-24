@@ -218,6 +218,7 @@ export default function Filters({
           <option value="pausou">⏸️ Pausou</option>
           <option value="finalizou">🏁 Finalizou</option>
           <option value="reembolsado">💸 Reembolsou</option>
+          <option value="inadimplente">💳 Inadimplente</option>
         </select>
         <select value={growthFilter} onChange={(e) => onGrowthChange(e.target.value)} className={selectClass}>
           <option value="">Todos os ganhos</option>
