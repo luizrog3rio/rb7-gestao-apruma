@@ -2,6 +2,7 @@
 
 import type { Mentorado } from '@/lib/supabase'
 import { formatNumber, calcTempoRestante } from '@/lib/utils'
+import { turmaLabel } from '@/lib/turmas'
 
 type Props = {
   mentorados: Mentorado[]
@@ -76,7 +77,7 @@ function MobileCard({ m, onEdit, lastUpdate }: { m: Mentorado; onEdit?: (m: Ment
       </div>
 
       <div className="flex items-center gap-2 mb-2">
-        <span className="bg-brand-50 text-brand-700 text-xs font-medium px-2 py-0.5 rounded-lg">{m.turma}</span>
+        <span className="bg-brand-50 text-brand-700 text-xs font-medium px-2 py-0.5 rounded-lg" title={turmaLabel(m.turma)}>{m.turma}</span>
         <span className="text-xs text-gray-500">{m.nicho}</span>
         <span className={`text-xs font-bold px-2 py-0.5 rounded-lg ml-auto ${
           m.status === 'cancelou' ? 'bg-red-100 text-red-700'
@@ -180,7 +181,7 @@ export default function MentoradosTable({ mentorados, onEdit, lastUpdate }: Prop
                     </td>
                     <td className="px-4 py-4 text-gray-600">{m.nicho}</td>
                     <td className="px-4 py-4">
-                      <span className="inline-block whitespace-nowrap bg-brand-50 text-brand-700 text-xs font-medium px-2 py-1 rounded-lg">
+                      <span className="inline-block whitespace-nowrap bg-brand-50 text-brand-700 text-xs font-medium px-2 py-1 rounded-lg" title={turmaLabel(m.turma)}>
                         {m.turma}
                       </span>
                     </td>

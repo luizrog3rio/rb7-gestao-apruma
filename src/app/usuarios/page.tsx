@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { authedFetch } from '@/lib/api-client'
 import { useUserRole } from '@/lib/useUserRole'
 import { CAPABILITIES } from '@/lib/permissions'
-import { TURMAS } from '@/lib/turmas'
+import { TURMAS, turmaLabel } from '@/lib/turmas'
 
 type UsuarioSistema = {
   id: string
@@ -289,7 +289,7 @@ function EditUserModal({
             >
               <option value="">— sem turma —</option>
               {TURMAS.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>{turmaLabel(t)}</option>
               ))}
             </select>
           </div>

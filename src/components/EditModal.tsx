@@ -5,6 +5,7 @@ import { supabase, type Mentorado } from '@/lib/supabase'
 import { authedFetch } from '@/lib/api-client'
 import type { UserRole } from '@/lib/useUserRole'
 import { pode } from '@/lib/permissions'
+import { TURMAS, turmaLabel } from '@/lib/turmas'
 
 type Props = {
   mentorado: Mentorado
@@ -171,10 +172,9 @@ export default function EditModal({ mentorado, onClose, onSave, onDelete, userRo
             <div>
               <label className={labelClass}>Turma</label>
               <select className={inputClass} value={form.turma} onChange={(e) => handleChange('turma', e.target.value)}>
-                <option value="Turma 1 - Rafa">Turma 1 - Rafa</option>
-                <option value="Turma 2 - Rafa">Turma 2 - Rafa</option>
-                <option value="Turma 3 - Carlos">Turma 3 - Carlos</option>
-                <option value="Turma 4 - Ivens">Turma 4 - Ivens</option>
+                {TURMAS.map((t) => (
+                  <option key={t} value={t}>{turmaLabel(t)}</option>
+                ))}
               </select>
             </div>
             <div>
