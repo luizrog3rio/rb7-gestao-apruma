@@ -42,6 +42,8 @@ export type Mentorado = {
   avatar: string | null
   status: string
   status_at: string | null
+  // Dias acumulados em pausas já encerradas; empurram o fim do plano pra frente.
+  dias_pausados: number | null
   created_at: string
   updated_at: string
   ig_issue: string | null

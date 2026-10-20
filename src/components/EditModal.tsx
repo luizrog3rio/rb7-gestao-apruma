@@ -6,6 +6,7 @@ import { authedFetch } from '@/lib/api-client'
 import type { UserRole } from '@/lib/useUserRole'
 import { pode } from '@/lib/permissions'
 import { TURMAS, turmaLabel } from '@/lib/turmas'
+import { calcDiasPausa } from '@/lib/utils'
 
 type Props = {
   mentorado: Mentorado
@@ -221,7 +222,17 @@ export default function EditModal({ mentorado, onClose, onSave, onDelete, userRo
                 <button
                   onClick={async () => {
                     if (!confirm('Reativar este mentorado (voltar para Ativo)?')) return
-                    await supabase.from('mentorados').update({ status: 'ativo', status_at: null }).eq('id', mentorado.id)
+                    const reativacao: Record<string, unknown> = { status: 'ativo', status_at: null }
+                    // Saindo da pausa: o período parado estende o fim do plano,
+                    // senão o tempo restante "perde" os dias pausados.
+                    if (mentorado.status === 'pausou' && mentorado.status_at) {
+                      reativacao.dias_pausados = (mentorado.dias_pausados ?? 0) + calcDiasPausa(mentorado.status_at)
+                    }
+                    const { error } = await supabase.from('mentorados').update(reativacao).eq('id', mentorado.id)
+                    if (error) {
+                      alert('Erro ao reativar: ' + error.message)
+                      return
+                    }
                     alert('Status reativado!')
                     onSave()
                   }}

@@ -51,7 +51,7 @@ function IgIssueBadge({ issue }: { issue: string | null }) {
 function MobileCard({ m, onEdit, lastUpdate }: { m: Mentorado; onEdit?: (m: Mentorado) => void; lastUpdate?: string | null }) {
   const gained = m.seguidores_atual - m.seguidores_inicial
   const pausado = m.status === 'pausou'
-  const tempo = calcTempoRestante(m.data_inicio, m.plano, pausado ? m.status_at ?? undefined : undefined)
+  const tempo = calcTempoRestante(m.data_inicio, m.plano, pausado ? m.status_at ?? undefined : undefined, m.dias_pausados ?? 0)
 
   return (
     <div
@@ -160,7 +160,7 @@ export default function MentoradosTable({ mentorados, onEdit, lastUpdate }: Prop
             <tbody>
               {mentorados.map((m) => {
                 const pausado = m.status === 'pausou'
-                const tempo = calcTempoRestante(m.data_inicio, m.plano, pausado ? m.status_at ?? undefined : undefined)
+                const tempo = calcTempoRestante(m.data_inicio, m.plano, pausado ? m.status_at ?? undefined : undefined, m.dias_pausados ?? 0)
                 const gained = m.seguidores_atual - m.seguidores_inicial
                 return (
                   <tr
