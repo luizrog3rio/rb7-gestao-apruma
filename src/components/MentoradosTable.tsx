@@ -1,6 +1,6 @@
 'use client'
 
-import type { Mentorado } from '@/lib/supabase'
+import { diasExtras, type Mentorado } from '@/lib/supabase'
 import { formatNumber, calcTempoRestante } from '@/lib/utils'
 import { turmaLabel } from '@/lib/turmas'
 
@@ -8,6 +8,14 @@ type Props = {
   mentorados: Mentorado[]
   onEdit?: (m: Mentorado) => void
   lastUpdate?: string | null
+}
+
+function tempoTitle(m: Mentorado, pausado: boolean): string | undefined {
+  const partes: string[] = []
+  if (pausado) partes.push('Tempo restante congelado no momento em que pausou')
+  const bonus = m.dias_bonus ?? 0
+  if (bonus > 0) partes.push(`Inclui ${bonus} ${bonus === 1 ? 'dia' : 'dias'} de tempo extra`)
+  return partes.length ? partes.join(' · ') : undefined
 }
 
 function AvatarImg({ m, lastUpdate }: { m: Mentorado; lastUpdate?: string | null }) {
@@ -51,7 +59,7 @@ function IgIssueBadge({ issue }: { issue: string | null }) {
 function MobileCard({ m, onEdit, lastUpdate }: { m: Mentorado; onEdit?: (m: Mentorado) => void; lastUpdate?: string | null }) {
   const gained = m.seguidores_atual - m.seguidores_inicial
   const pausado = m.status === 'pausou'
-  const tempo = calcTempoRestante(m.data_inicio, m.plano, pausado ? m.status_at ?? undefined : undefined, m.dias_pausados ?? 0)
+  const tempo = calcTempoRestante(m.data_inicio, m.plano, pausado ? m.status_at ?? undefined : undefined, diasExtras(m))
 
   return (
     <div
@@ -110,9 +118,9 @@ function MobileCard({ m, onEdit, lastUpdate }: { m: Mentorado; onEdit?: (m: Ment
           <div className="text-gray-400">Restante</div>
           <div
             className="font-bold text-gray-700 text-[11px]"
-            title={pausado ? 'Tempo restante congelado no momento em que pausou' : undefined}
+            title={tempoTitle(m, pausado)}
           >
-            {tempo}{pausado ? ' ⏸️' : ''}
+            {tempo}{pausado ? ' ⏸️' : ''}{(m.dias_bonus ?? 0) > 0 ? ' 🎁' : ''}
           </div>
         </div>
       </div>
@@ -160,7 +168,7 @@ export default function MentoradosTable({ mentorados, onEdit, lastUpdate }: Prop
             <tbody>
               {mentorados.map((m) => {
                 const pausado = m.status === 'pausou'
-                const tempo = calcTempoRestante(m.data_inicio, m.plano, pausado ? m.status_at ?? undefined : undefined, m.dias_pausados ?? 0)
+                const tempo = calcTempoRestante(m.data_inicio, m.plano, pausado ? m.status_at ?? undefined : undefined, diasExtras(m))
                 const gained = m.seguidores_atual - m.seguidores_inicial
                 return (
                   <tr
@@ -210,9 +218,9 @@ export default function MentoradosTable({ mentorados, onEdit, lastUpdate }: Prop
                     </td>
                     <td
                       className="px-4 py-4 text-gray-600 text-xs"
-                      title={pausado ? 'Tempo restante congelado no momento em que pausou' : undefined}
+                      title={tempoTitle(m, pausado)}
                     >
-                      {tempo}{pausado ? ' ⏸️' : ''}
+                      {tempo}{pausado ? ' ⏸️' : ''}{(m.dias_bonus ?? 0) > 0 ? ' 🎁' : ''}
                     </td>
                     {onEdit && (
                       <td className="px-4 py-4">

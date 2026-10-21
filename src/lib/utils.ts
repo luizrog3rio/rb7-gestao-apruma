@@ -18,12 +18,12 @@ export function calcDiasPausa(pausadoEm: string | Date, ate: Date = new Date()):
 
 // referencia permite "congelar" o cálculo em um momento passado (ex: quando
 // pausado, usar status_at em vez de agora, já que o tempo parado não corre).
-// diasPausados soma as pausas já encerradas, que estendem o fim do plano.
-export function calcTempoRestante(dataInicio: string, planoMeses: number, referencia?: string | Date, diasPausados = 0): string {
+// diasExtras soma pausas já encerradas e bônus de tempo extra, que estendem o fim do plano.
+export function calcTempoRestante(dataInicio: string, planoMeses: number, referencia?: string | Date, diasExtras = 0): string {
   const inicio = new Date(dataInicio)
   const fim = new Date(inicio)
   fim.setMonth(fim.getMonth() + planoMeses)
-  fim.setDate(fim.getDate() + diasPausados)
+  fim.setDate(fim.getDate() + diasExtras)
   const agora = referencia ? new Date(referencia) : new Date()
   const diffMs = fim.getTime() - agora.getTime()
   if (diffMs <= 0) return 'Encerrado'

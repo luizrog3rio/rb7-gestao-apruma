@@ -28,6 +28,21 @@ export async function fetchAll<T>(
   return rows
 }
 
+export type MentoradoBonus = {
+  id: string
+  mentorado_id: string
+  dias: number
+  observacao: string
+  created_at: string
+  created_by_email: string | null
+  created_by_name: string | null
+}
+
+// Dias que estendem o fim do plano: pausas já encerradas + bônus de tempo extra.
+export function diasExtras(m: Pick<Mentorado, 'dias_pausados' | 'dias_bonus'>): number {
+  return (m.dias_pausados ?? 0) + (m.dias_bonus ?? 0)
+}
+
 export type Mentorado = {
   id: string
   nome: string
@@ -44,6 +59,8 @@ export type Mentorado = {
   status_at: string | null
   // Dias acumulados em pausas já encerradas; empurram o fim do plano pra frente.
   dias_pausados: number | null
+  // Soma dos bônus de tempo extra (mentorado_bonus), mantida por trigger no banco.
+  dias_bonus: number | null
   created_at: string
   updated_at: string
   ig_issue: string | null

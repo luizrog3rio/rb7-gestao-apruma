@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { supabase, type Mentorado } from '@/lib/supabase'
+import { useEffect, useState } from 'react'
+import { supabase, type Mentorado, type MentoradoBonus } from '@/lib/supabase'
 import { authedFetch } from '@/lib/api-client'
 import type { UserRole } from '@/lib/useUserRole'
 import { pode } from '@/lib/permissions'
@@ -29,6 +29,19 @@ export default function EditModal({ mentorado, onClose, onSave, onDelete, userRo
   })
   const [saving, setSaving] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [bonus, setBonus] = useState<MentoradoBonus[]>([])
+  const [bonusDias, setBonusDias] = useState('')
+  const [bonusObs, setBonusObs] = useState('')
+  const [savingBonus, setSavingBonus] = useState(false)
+
+  useEffect(() => {
+    supabase
+      .from('mentorado_bonus')
+      .select('id, mentorado_id, dias, observacao, created_at, created_by_email, created_by_name')
+      .eq('mentorado_id', mentorado.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setBonus((data as MentoradoBonus[] | null) || []))
+  }, [mentorado.id])
 
   const canManageStatus = userRole === 'admin' || userRole === 'gerente'
   const canEditSeguidores = pode('editar_seguidores', userRole, extraCaps)
@@ -112,6 +125,41 @@ export default function EditModal({ mentorado, onClose, onSave, onDelete, userRo
       alert('Erro ao conectar com o Instagram. Tente novamente.')
     }
     setRefreshing(false)
+  }
+
+  // Autor (created_by_*) é preenchido pelo banco a partir do usuário logado.
+  const handleAddBonus = async () => {
+    const dias = Number(bonusDias)
+    const observacao = bonusObs.trim()
+    if (!Number.isInteger(dias) || dias < 1 || dias > 365) {
+      alert('Informe os dias de tempo extra (de 1 a 365).')
+      return
+    }
+    if (!observacao) {
+      alert('Escreva na observação o motivo do tempo extra.')
+      return
+    }
+    if (!confirm(`Dar ${dias} ${dias === 1 ? 'dia' : 'dias'} de tempo extra para ${mentorado.nome}?`)) return
+    setSavingBonus(true)
+    const { error } = await supabase.from('mentorado_bonus').insert({ mentorado_id: mentorado.id, dias, observacao })
+    setSavingBonus(false)
+    if (error) {
+      alert('Erro ao dar tempo extra: ' + error.message)
+      return
+    }
+    alert('Tempo extra adicionado!')
+    onSave()
+  }
+
+  const handleRemoveBonus = async (b: MentoradoBonus) => {
+    if (!confirm(`Remover o bônus de ${b.dias} dias ("${b.observacao}")?`)) return
+    const { error } = await supabase.from('mentorado_bonus').delete().eq('id', b.id)
+    if (error) {
+      alert('Erro ao remover bônus: ' + error.message)
+      return
+    }
+    alert('Bônus removido!')
+    onSave()
   }
 
   const handleDelete = async () => {
@@ -199,6 +247,69 @@ export default function EditModal({ mentorado, onClose, onSave, onDelete, userRo
                 value={form.seguidores_atual}
                 onChange={(e) => handleChange('seguidores_atual', Number(e.target.value))}
               />
+            </div>
+          )}
+
+          {/* Tempo extra */}
+          {(canManageStatus || bonus.length > 0) && (
+            <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-4 space-y-3">
+              <div className="text-sm font-semibold text-violet-800">🎁 Tempo extra</div>
+              {canManageStatus && (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={365}
+                      placeholder="Dias"
+                      className="w-24 flex-shrink-0 px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-300"
+                      value={bonusDias}
+                      onChange={(e) => setBonusDias(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddBonus}
+                      disabled={savingBonus}
+                      className="flex-1 px-3 py-2 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-xl transition-colors disabled:opacity-50"
+                    >
+                      {savingBonus ? 'Salvando...' : 'Dar tempo extra'}
+                    </button>
+                  </div>
+                  <textarea
+                    rows={2}
+                    placeholder="Observação: por que está dando esse tempo? (obrigatório)"
+                    className={inputClass}
+                    value={bonusObs}
+                    onChange={(e) => setBonusObs(e.target.value)}
+                  />
+                </div>
+              )}
+              {bonus.length > 0 && (
+                <ul className="space-y-2">
+                  {bonus.map((b) => (
+                    <li key={b.id} className="flex items-start gap-2 text-sm bg-white rounded-lg border border-violet-100 px-3 py-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-violet-700">+{b.dias} {b.dias === 1 ? 'dia' : 'dias'}</div>
+                        <div className="text-gray-700 break-words">{b.observacao}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {new Date(b.created_at).toLocaleDateString('pt-BR')}
+                          {(b.created_by_name || b.created_by_email) && ` · por ${b.created_by_name || b.created_by_email}`}
+                        </div>
+                      </div>
+                      {userRole === 'admin' && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBonus(b)}
+                          className="text-xs text-red-500 hover:text-red-700 flex-shrink-0"
+                          title="Remover este bônus (corrige lançamento errado)"
+                        >
+                          Remover
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
 
