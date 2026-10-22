@@ -7,6 +7,12 @@
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "video-tempo-extra",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "_private/videos/tutorial-tempo-extra", "run", "dev", "--", "--no-open", "--port", "3010"],
+      "port": 3010
     }
   ]
 }
