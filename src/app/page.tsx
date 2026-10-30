@@ -30,6 +30,13 @@ export default function Dashboard() {
   const isAdmin = role === 'admin'
   const isMentor = role === 'mentor'
 
+  // Mentor vê só a própria turma; a aba "Todos" abre a base inteira (só leitura)
+  // pra achar referências de nicho entre as turmas.
+  const [aba, setAba] = useState<'turma' | 'todos'>('turma')
+  const [todos, setTodos] = useState<Mentorado[]>([])
+  const [loadingTodos, setLoadingTodos] = useState(false)
+  const verTodos = isMentor && aba === 'todos'
+
   const fetchMentorados = useCallback(async () => {
     setLoading(true)
     const { data, error } = await supabase
@@ -42,6 +49,30 @@ export default function Dashboard() {
     setMentorados(data || [])
     setLoading(false)
   }, [])
+
+  const fetchTodos = useCallback(async () => {
+    setLoadingTodos(true)
+    try {
+      const res = await authedFetch('/api/mentorados-todos')
+      if (res.ok) {
+        const data = await res.json()
+        setTodos(data.mentorados || [])
+      } else {
+        console.error('Erro ao buscar todos os mentorados:', res.status)
+      }
+    } catch (err) {
+      console.error('Erro ao buscar todos os mentorados:', err)
+    }
+    setLoadingTodos(false)
+  }, [])
+
+  const trocarAba = useCallback((nova: 'turma' | 'todos') => {
+    setAba(nova)
+    setTurmaFilter('')
+    if (nova === 'todos' && todos.length === 0) fetchTodos()
+  }, [todos.length, fetchTodos])
+
+  const base = verTodos ? todos : mentorados
 
   const updateFromInstagram = useCallback(async () => {
     setUpdating(true)
@@ -63,13 +94,13 @@ export default function Dashboard() {
     fetchMentorados()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const turmas = useMemo(() => [...new Set(mentorados.map((m) => m.turma))].sort(), [mentorados])
+  const turmas = useMemo(() => [...new Set(base.map((m) => m.turma))].sort(), [base])
 
   const filtered = useMemo(() => {
-    return mentorados
+    return base
       .filter((m) => {
-        // Mentor only sees their turma
-        if (isMentor && userTurma && m.turma !== userTurma) return false
+        // Mentor only sees their turma (exceto na aba "Todos os mentorados")
+        if (isMentor && !verTodos && userTurma && m.turma !== userTurma) return false
         // Date filter on data_inicio
         if (dateFrom && m.data_inicio < dateFrom) return false
         if (dateTo && m.data_inicio > dateTo) return false
@@ -99,7 +130,7 @@ export default function Dashboard() {
           default: return 0
         }
       })
-  }, [mentorados, search, turmaFilter, planoFilter, growthFilter, statusFilter, igFilter, sort, isMentor, userTurma, dateFrom, dateTo])
+  }, [base, search, turmaFilter, planoFilter, growthFilter, statusFilter, igFilter, sort, isMentor, verTodos, userTurma, dateFrom, dateTo])
 
   const handleGrowthCardClick = useCallback((value: string) => {
     setStatusFilter('')
@@ -136,7 +167,9 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
           <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Página Inicial</h1>
-          <p className="text-gray-500 text-sm mt-1">Visão geral dos seus mentorados</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {verTodos ? 'Todos os mentorados de todas as turmas (só consulta)' : 'Visão geral dos seus mentorados'}
+          </p>
         </div>
         {isAdmin && (
           <div className="flex items-center gap-3">
@@ -162,6 +195,22 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {isMentor && (
+        <div className="mb-4 inline-flex p-1 bg-gray-100 rounded-xl">
+          {([['turma', 'Minha turma'], ['todos', 'Todos os mentorados']] as const).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => trocarAba(id)}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                aba === id ? 'bg-white text-brand-700 shadow-sm' : 'text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {igIssueCount > 0 && igFilter !== 'issue' && !isMentor && (
         <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
@@ -197,13 +246,13 @@ export default function Dashboard() {
         onStatusFilterChange={handleStatusSelect}
         onIgFilterChange={setIgFilter}
         onSortChange={setSort}
-        onRefresh={fetchMentorados}
+        onRefresh={verTodos ? fetchTodos : fetchMentorados}
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
-        hideTurmaFilter={isMentor}
+        hideTurmaFilter={isMentor && !verTodos}
       />
 
-      {loading ? (
+      {(verTodos ? loadingTodos : loading) ? (
         <div className="bg-white rounded-2xl p-12 text-center text-gray-400 shadow-sm">
           <div className="text-3xl mb-3 animate-pulse">⏳</div>
           Carregando mentorados...
