@@ -5,6 +5,7 @@ import { authedFetch } from '@/lib/api-client'
 import { useUserRole } from '@/lib/useUserRole'
 import { CAPABILITIES } from '@/lib/permissions'
 import { TURMAS, turmaLabel } from '@/lib/turmas'
+import { startViewAs } from '@/lib/viewAs'
 
 type UsuarioSistema = {
   id: string
@@ -16,6 +17,21 @@ type UsuarioSistema = {
   created_at: string
   last_sign_in_at: string | null
   ativo: boolean
+}
+
+// Botão "Ver como": só para outros usuários que já têm papel definido.
+function VerComoButton({ u, isSelf }: { u: UsuarioSistema; isSelf: boolean }) {
+  if (isSelf || !u.role) return null
+  const role = u.role
+  return (
+    <button
+      onClick={() => startViewAs({ userId: u.id, nome: u.nome, email: u.email, role, turma: u.turma, caps: u.caps })}
+      className="text-xs font-medium text-brand-600 hover:text-brand-800 whitespace-nowrap"
+      title="Ver o painel como esta pessoa vê"
+    >
+      👁️ Ver como
+    </button>
+  )
 }
 
 const roleBadge: Record<string, { label: string; cls: string }> = {
@@ -506,7 +522,10 @@ export default function UsuariosPage() {
                   <td className="px-6 py-3 text-sm text-gray-600">{fmtDate(u.created_at)}</td>
                   <td className="px-6 py-3 text-sm text-gray-600">{fmtDate(u.last_sign_in_at)}</td>
                   <td className="px-6 py-3">
-                    <StatusButton u={u} isSelf={u.email === meuEmail} onToggle={() => handleToggleAtivo(u)} />
+                    <div className="flex items-center gap-3">
+                      <VerComoButton u={u} isSelf={u.email === meuEmail} />
+                      <StatusButton u={u} isSelf={u.email === meuEmail} onToggle={() => handleToggleAtivo(u)} />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -540,6 +559,7 @@ export default function UsuariosPage() {
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-2">
                   <CapsCell u={u} onManage={() => setPermsUser(u)} />
+                  <VerComoButton u={u} isSelf={u.email === meuEmail} />
                   <StatusButton u={u} isSelf={u.email === meuEmail} onToggle={() => handleToggleAtivo(u)} />
                 </div>
               </div>
