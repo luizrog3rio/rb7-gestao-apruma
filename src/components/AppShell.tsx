@@ -7,13 +7,14 @@ import AuthGuard from '@/components/AuthGuard'
 import { useUserRole } from '@/lib/useUserRole'
 import { stopViewAs } from '@/lib/viewAs'
 
-const mentorAllowedPaths = ['/', '/sos-mentores', '/toque-do-rafa', '/login']
+const mentorAllowedPaths = ['/', '/sos-mentores', '/toque-do-rafa', '/login', '/definir-senha']
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const { role, loading, viewingAs } = useUserRole()
-  const isLogin = pathname === '/login'
+  // Telas sem sidebar nem AuthGuard: /definir-senha recebe a sessão pelo link do convite.
+  const isLogin = pathname === '/login' || pathname === '/definir-senha'
 
   useEffect(() => {
     if (loading || isLogin) return
