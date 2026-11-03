@@ -2,7 +2,7 @@
 // é comparado por igualdade de string na RLS que restringe o que cada mentor enxerga.
 // Ao trocar o mentor de uma turma, renomeie o valor aqui E no banco (mentorados.turma
 // e user_roles.turma) e registre o mentor anterior em TURMAS_HISTORICO.
-export const TURMAS = ['Turma 1 - Rafa', 'Turma 2 - Rafa', 'Turma 3 - Henrique', 'Turma 4 - Ivens'] as const
+export const TURMAS = ['Turma 1 - Rafa', 'Turma 2 - Rafa', 'Turma 3 - Henrique', 'Turma 4 - Ivens', 'Turma - Livia'] as const
 
 export type Turma = (typeof TURMAS)[number]
 
