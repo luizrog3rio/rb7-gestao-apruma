@@ -34,6 +34,101 @@ function VerComoButton({ u, isSelf }: { u: UsuarioSistema; isSelf: boolean }) {
   )
 }
 
+// Botão "Link de acesso": gera um link novo para a pessoa criar/trocar a senha.
+function LinkAcessoButton({ u, isSelf, onClick }: { u: UsuarioSistema; isSelf: boolean; onClick: () => void }) {
+  if (isSelf || !u.ativo) return null
+  return (
+    <button
+      onClick={onClick}
+      className="text-xs font-medium text-brand-600 hover:text-brand-800 whitespace-nowrap"
+      title="Gerar link para a pessoa criar a senha (convite expirado, esqueceu a senha)"
+    >
+      🔗 Link de acesso
+    </button>
+  )
+}
+
+function LinkAcessoModal({ user, onClose }: { user: UsuarioSistema; onClose: () => void }) {
+  const [link, setLink] = useState('')
+  const [erro, setErro] = useState('')
+  const [copiado, setCopiado] = useState(false)
+
+  useEffect(() => {
+    let cancel = false
+    ;(async () => {
+      try {
+        const res = await authedFetch('/api/usuarios/link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id }),
+        })
+        const j = await res.json().catch(() => ({}))
+        if (cancel) return
+        if (!res.ok || !j.tokenHash) {
+          setErro(j.error || 'Não foi possível gerar o link.')
+          return
+        }
+        setLink(`${window.location.origin}/definir-senha?token_hash=${encodeURIComponent(j.tokenHash)}`)
+      } catch {
+        if (!cancel) setErro('Não foi possível gerar o link.')
+      }
+    })()
+    return () => {
+      cancel = true
+    }
+  }, [user.id])
+
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      setErro('Não foi possível copiar. Selecione o link e copie manualmente.')
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 animate-scale-in" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-gray-900">Link de acesso</h2>
+            <p className="text-sm text-gray-500 mt-0.5 truncate">{user.nome || user.email}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl shrink-0 ml-3">&times;</button>
+        </div>
+        <div className="p-6 space-y-3">
+          {!link && !erro && <p className="text-sm text-gray-400 text-center">Gerando link...</p>}
+          {link && (
+            <>
+              <p className="text-xs text-gray-500">
+                Mande este link para a pessoa (WhatsApp, por exemplo). Ao abrir, ela cria a senha e já entra no painel.
+              </p>
+              <input
+                readOnly
+                value={link}
+                onFocus={(e) => e.target.select()}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-xs text-gray-600 bg-gray-50 outline-none"
+              />
+              <button
+                onClick={copiar}
+                className="w-full py-2.5 text-white text-sm font-medium bg-brand-600 hover:bg-brand-700 rounded-xl transition-colors"
+              >
+                {copiado ? 'Copiado ✓' : 'Copiar link'}
+              </button>
+              <p className="text-xs text-gray-400">
+                Funciona uma vez só e expira no mesmo prazo do link de convite. Gerar outro invalida este.
+              </p>
+            </>
+          )}
+          {erro && <p className="text-sm text-red-600">{erro}</p>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const roleBadge: Record<string, { label: string; cls: string }> = {
   admin: { label: 'Admin', cls: 'bg-brand-100 text-brand-700' },
   gerente: { label: 'Gerente', cls: 'bg-slate-200 text-slate-700' },
@@ -338,6 +433,7 @@ export default function UsuariosPage() {
   const [busca, setBusca] = useState('')
   const [permsUser, setPermsUser] = useState<UsuarioSistema | null>(null)
   const [editUser, setEditUser] = useState<UsuarioSistema | null>(null)
+  const [linkUser, setLinkUser] = useState<UsuarioSistema | null>(null)
 
   const fetchUsuarios = useCallback(async () => {
     setLoading(true)
@@ -524,6 +620,7 @@ export default function UsuariosPage() {
                   <td className="px-6 py-3">
                     <div className="flex items-center gap-3">
                       <VerComoButton u={u} isSelf={u.email === meuEmail} />
+                      <LinkAcessoButton u={u} isSelf={u.email === meuEmail} onClick={() => setLinkUser(u)} />
                       <StatusButton u={u} isSelf={u.email === meuEmail} onToggle={() => handleToggleAtivo(u)} />
                     </div>
                   </td>
@@ -560,6 +657,7 @@ export default function UsuariosPage() {
                 <div className="shrink-0 flex flex-col items-end gap-2">
                   <CapsCell u={u} onManage={() => setPermsUser(u)} />
                   <VerComoButton u={u} isSelf={u.email === meuEmail} />
+                  <LinkAcessoButton u={u} isSelf={u.email === meuEmail} onClick={() => setLinkUser(u)} />
                   <StatusButton u={u} isSelf={u.email === meuEmail} onToggle={() => handleToggleAtivo(u)} />
                 </div>
               </div>
@@ -575,6 +673,8 @@ export default function UsuariosPage() {
           onChange={(caps) => handleCapsChange(permsUser.id, caps)}
         />
       )}
+
+      {linkUser && <LinkAcessoModal user={linkUser} onClose={() => setLinkUser(null)} />}
 
       {editUser && (
         <EditUserModal

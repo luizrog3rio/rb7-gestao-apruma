@@ -17,7 +17,21 @@ export default function DefinirSenhaPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const abrir = async () => {
+      // Link gerado pelo admin em /usuarios (?token_hash=...): valida aqui, via JS,
+      // para o preview de link do WhatsApp não gastar o token de uso único.
+      const params = new URLSearchParams(window.location.search)
+      const tokenHash = params.get('token_hash')
+      if (tokenHash) {
+        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' })
+        window.history.replaceState(null, '', window.location.pathname)
+        if (error) {
+          setStatus('invalido')
+          return
+        }
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         setEmail(session.user.email ?? '')
         setStatus('pronto')
@@ -25,7 +39,8 @@ export default function DefinirSenhaPage() {
         // Link expirado/já usado: o Supabase devolve error=... no hash e nenhuma sessão.
         setStatus('invalido')
       }
-    })
+    }
+    abrir()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
