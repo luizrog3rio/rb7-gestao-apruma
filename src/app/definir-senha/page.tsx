@@ -16,19 +16,18 @@ export default function DefinirSenhaPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  // Token do link gerado pelo admin em /usuarios (?token_hash=...). Só é validado
+  // no submit: abrir o link (preview do WhatsApp, admin conferindo) não gasta o
+  // token nem loga ninguém, e a pessoa só entra depois de criar a senha.
+  const [tokenHash, setTokenHash] = useState<string | null>(null)
+
   useEffect(() => {
     const abrir = async () => {
-      // Link gerado pelo admin em /usuarios (?token_hash=...): valida aqui, via JS,
-      // para o preview de link do WhatsApp não gastar o token de uso único.
-      const params = new URLSearchParams(window.location.search)
-      const tokenHash = params.get('token_hash')
-      if (tokenHash) {
-        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' })
-        window.history.replaceState(null, '', window.location.pathname)
-        if (error) {
-          setStatus('invalido')
-          return
-        }
+      const th = new URLSearchParams(window.location.search).get('token_hash')
+      if (th) {
+        setTokenHash(th)
+        setStatus('pronto')
+        return
       }
 
       const { data: { session } } = await supabase.auth.getSession()
@@ -56,6 +55,17 @@ export default function DefinirSenhaPage() {
     }
 
     setSaving(true)
+    if (tokenHash) {
+      const { error: otpError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' })
+      if (otpError) {
+        setSaving(false)
+        setStatus('invalido')
+        return
+      }
+      // Token é de uso único: tira da URL e passa a usar a sessão recém-aberta.
+      setTokenHash(null)
+      window.history.replaceState(null, '', window.location.pathname)
+    }
     const { error } = await supabase.auth.updateUser({ password: senha })
     setSaving(false)
 
@@ -91,7 +101,9 @@ export default function DefinirSenhaPage() {
           {status === 'pronto' && (
             <>
               <h1 className="text-xl font-bold text-gray-900 text-center mb-1">Crie sua senha</h1>
-              <p className="text-sm text-gray-400 text-center mb-6">{email}</p>
+              <p className="text-sm text-gray-400 text-center mb-6">
+                {email || 'Defina a senha para acessar o painel'}
+              </p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
