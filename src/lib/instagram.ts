@@ -75,7 +75,11 @@ async function fetchFromScrapeCreators(handle: string): Promise<ProfileFetchResu
     const res = await fetch(`${SC_PROFILE_URL}?handle=${encodeURIComponent(handle)}`, {
       headers: { 'x-api-key': SCRAPECREATORS_API_KEY },
     })
-    if (!res.ok) return { status: 'error', profile: null }
+    if (!res.ok) {
+      // 401 = chave inválida; 402/429 = sem créditos/limite. Fica no log da Vercel.
+      console.error(`ScrapeCreators HTTP ${res.status} para @${handle}:`, (await res.text()).slice(0, 300))
+      return { status: 'error', profile: null }
+    }
 
     const data = await res.json()
     if (data?.data?.user) {
@@ -91,6 +95,7 @@ async function fetchFromScrapeCreators(handle: string): Promise<ProfileFetchResu
     ) {
       return { status: 'not_found', profile: null }
     }
+    console.error(`ScrapeCreators sem dados para @${handle}:`, JSON.stringify(data).slice(0, 300))
     return { status: 'error', profile: null }
   } catch (err) {
     console.error('ScrapeCreators API error:', err)
@@ -106,7 +111,10 @@ async function fetchFromLooter(handle: string): Promise<ProfileFetchResult> {
     const res = await fetch(`https://${LOOTER_HOST}/profile?username=${encodeURIComponent(handle)}`, {
       headers: { 'x-rapidapi-host': LOOTER_HOST, 'x-rapidapi-key': RAPIDAPI_KEY },
     })
-    if (!res.ok) return { status: 'error', profile: null }
+    if (!res.ok) {
+      console.error(`Instagram Looter HTTP ${res.status} para @${handle}:`, (await res.text()).slice(0, 300))
+      return { status: 'error', profile: null }
+    }
 
     const d = await res.json()
     if (d?.status === true && d?.username) {
@@ -118,6 +126,7 @@ async function fetchFromLooter(handle: string): Promise<ProfileFetchResult> {
       return { status: 'not_found', profile: null }
     }
     if (msg.includes('restrict') || msg.includes('private')) return { status: 'restricted', profile: null }
+    console.error(`Instagram Looter sem dados para @${handle}:`, JSON.stringify(d).slice(0, 300))
     return { status: 'error', profile: null }
   } catch (err) {
     console.error('Instagram Looter API error:', err)

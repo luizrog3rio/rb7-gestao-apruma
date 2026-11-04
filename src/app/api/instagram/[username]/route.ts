@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { fetchInstagramProfile } from '@/lib/instagram'
+import { fetchProfileWithStatus } from '@/lib/instagram'
 import { getRequestRole } from '@/lib/api-auth'
 
 export const maxDuration = 60
@@ -17,10 +17,16 @@ export async function GET(
     return NextResponse.json({ error: 'Username inválido' }, { status: 400 })
   }
 
-  const profile = await fetchInstagramProfile(username)
-  if (!profile) {
-    return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 })
-  }
+  const result = await fetchProfileWithStatus(username)
+  if (result.status === 'ok') return NextResponse.json(result.profile)
 
-  return NextResponse.json(profile)
+  // Cada motivo tem um status próprio para a tela explicar o que houve.
+  if (result.status === 'not_found') {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 })
+  }
+  if (result.status === 'restricted') {
+    return NextResponse.json({ error: 'restricted' }, { status: 403 })
+  }
+  // Falha das APIs (créditos, limite, chave, rede). O detalhe vai pro log.
+  return NextResponse.json({ error: 'provider_error' }, { status: 502 })
 }

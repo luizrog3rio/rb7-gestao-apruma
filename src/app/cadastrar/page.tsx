@@ -78,7 +78,13 @@ export default function CadastrarPage() {
           }
         } else {
           setIgProfile(null)
-          setIgError('Não foi possível puxar esse @ automaticamente — ele pode estar privado/restrito, não existir, ou ser um erro temporário. Confira o @ ou preencha os dados manualmente.')
+          if (res.status === 404) {
+            setIgError('Esse @ não existe no Instagram. Confira se foi digitado certo ou se a pessoa trocou de @.')
+          } else if (res.status === 403) {
+            setIgError('Esse perfil é privado/restrito, então não dá pra puxar os dados. Preencha manualmente.')
+          } else {
+            setIgError('O serviço que puxa os dados do Instagram falhou (pode ser falta de créditos ou instabilidade). Preencha os dados manualmente e avise o suporte.')
+          }
         }
       } catch {
         setIgProfile(null)
